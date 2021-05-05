@@ -4,6 +4,7 @@ import string
 import math
 import functools
 from bs4 import BeautifulSoup
+from requests.exceptions import MissingSchema, InvalidSchema
 
 
 class Perceptron:
@@ -23,11 +24,9 @@ class Perceptron:
                 else:
                     expected = -1
 
-                vector = vector[1:]
-                vector.append(-1)
-                perceptron_output = self.test(numpy.array(vector))
+                perceptron_output = self.test(numpy.array(vector[1:] + [-1]))
 
-                self.weights_vector = self.weights_vector + (expected - perceptron_output) * self.LEARNING_CONSTANT * numpy.array(vector)
+                self.weights_vector = self.weights_vector + (expected - perceptron_output) * self.LEARNING_CONSTANT * numpy.array(vector[1:] + [-1])
                 self.weights_vector = (self.weights_vector / math.sqrt(sum(self.weights_vector ** 2))) * 10
 
     def test(self, vector):
@@ -41,7 +40,7 @@ class Perceptron:
 
     def check_website_language(self, url, get_content):
         perceptron_output = self.test(self.data_service.count_letters_frequency(get_content(url)) + [-1])
-        if 0.1 < perceptron_output < -0.1:
+        if -0.1 < perceptron_output < 0.1:
             result = "HARD TO CLASSIFY"
         elif perceptron_output >= 0.1:
             result = "POLISH"
@@ -94,12 +93,12 @@ def main():
 
     option = ""
     while option.__ne__("END"):
-        option = input("Enter url adress or 'END': ")
+        option = input("Enter url address or 'END': ")
         try:
             perceptron.check_website_language(option, get_content_from_url)
-        except Exception:
+        except (MissingSchema, InvalidSchema):
             if option.__ne__("END"):
-                print("Inwalid url adress!")
+                print("Invalid url address!")
 
 
 main()
