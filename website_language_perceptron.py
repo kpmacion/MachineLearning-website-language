@@ -83,7 +83,7 @@ class DataService:
 
 
 def get_content_from_url(url):
-    html_content = requests.request("GET", url).text
+    html_content = requests.request("GET", url.removesuffix("\n")).text
     return ' '.join(BeautifulSoup(html_content, "html.parser").stripped_strings)
 
 
