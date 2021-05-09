@@ -8,10 +8,9 @@ from requests.exceptions import MissingSchema, InvalidSchema
 
 
 class Perceptron:
-    def __init__(self, data_service, file_path, learning_value):
-        self.data_service = data_service
+    def __init__(self, frequency_matrix, learning_value):
         self.weights_vector = numpy.ones(len(string.ascii_lowercase) + 1)
-        self.frequency_matrix = data_service.count_letters_frequencies_from_file(file_path)
+        self.frequency_matrix = frequency_matrix
         self.LEARNING_CONSTANT = learning_value
 
     def learn(self, number_of_iteration):
@@ -38,22 +37,21 @@ class Perceptron:
             return -1
         return scalar
 
-    def check_website_language(self, url, get_content):
-        perceptron_output = self.test(self.data_service.count_letters_frequency(get_content(url)) + [-1])
+    def check_website_language(self, frequency_vector):
+        perceptron_output = self.test(frequency_vector + [-1])
         if -0.1 < perceptron_output < 0.1:
-            result = "HARD TO CLASSIFY"
+            return "HARD TO CLASSIFY"
         elif perceptron_output >= 0.1:
-            result = "POLISH"
+            return "POLISH"
         else:
-            result = "NOT POLISH"
-
-        print(f"URL: {url}, language: {result}\n")
+            return "NOT POLISH"
 
 
 class DataService:
     letters_dictionary = {letter: 0 for letter in string.ascii_lowercase}
 
-    def count_letters_frequencies_from_file(self, file_path):
+    @classmethod
+    def count_letters_frequencies_from_file(cls, file_path):
         print("Frequency counting...")
         print("(This may take a while)\n")
         frequency_matrix = []
@@ -61,25 +59,26 @@ class DataService:
         f = open(file_path, "r")
         for line in f.readlines():
             if line.startswith("pl"):
-                frequency_matrix.append(["pl"] + self.count_letters_frequency(get_content_from_url(line.split(" ")[1])))
+                frequency_matrix.append(["pl"] + cls.count_letters_frequency(get_content_from_url(line.split(" ")[1])))
             else:
-                frequency_matrix.append(["not_pl"] + self.count_letters_frequency(get_content_from_url(line.split(" ")[1])))
+                frequency_matrix.append(["not_pl"] + cls.count_letters_frequency(get_content_from_url(line.split(" ")[1])))
 
         return frequency_matrix
 
+    @classmethod
     @functools.lru_cache()
-    def count_letters_frequency(self, text):
+    def count_letters_frequency(cls, text):
         letters_sum = 0
 
-        for key in self.letters_dictionary:
+        for key in cls.letters_dictionary:
             counter = text.lower().count(key)
             letters_sum += counter
-            self.letters_dictionary[key] = counter
+            cls.letters_dictionary[key] = counter
 
-        for key in self.letters_dictionary:
-            self.letters_dictionary[key] = round(self.letters_dictionary[key] / letters_sum, 4)
+        for key in cls.letters_dictionary:
+            cls.letters_dictionary[key] = round(cls.letters_dictionary[key] / letters_sum, 4)
 
-        return list(self.letters_dictionary.values())
+        return list(cls.letters_dictionary.values())
 
 
 def get_content_from_url(url):
@@ -88,14 +87,18 @@ def get_content_from_url(url):
 
 
 def main():
-    perceptron = Perceptron(DataService(), r".\training_pages.txt", 0.1)
+    file_path = r".\training_pages.txt"
+    frequency_matrix = DataService.count_letters_frequencies_from_file(file_path)
+    perceptron = Perceptron(frequency_matrix, 0.1)
     perceptron.learn(1000)
 
     option = ""
     while option.__ne__("END"):
         option = input("Enter url address or 'END': ")
         try:
-            perceptron.check_website_language(option, get_content_from_url)
+            content = get_content_from_url(option)
+            frequency_vector = DataService.count_letters_frequency(content)
+            print(f"URL: {option}, language: {perceptron.check_website_language(frequency_vector)}\n")
         except (MissingSchema, InvalidSchema):
             if option.__ne__("END"):
                 print("Invalid url address!")
